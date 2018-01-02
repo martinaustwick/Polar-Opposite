@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html>
+<head>
+	
+	<title>Polar Opposite</title>
+
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	
+	<link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico" />
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.2.0/dist/leaflet.css" integrity="sha512-M2wvCLH6DSRazYeZRIm1JnYyh22purTM+FDB5CsyxtQJYeKq83arPe5wgbNmcFXGqiSH2XR8dT/fJISVA1r/zQ==" crossorigin=""/>
+
+    <!--link rel="stylesheet" type="text/css" href="https://unpkg.com/leaflet.markercluster@1.1.0/dist/MarkerCluster.css" />
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/leaflet.markercluster@1.1.0/dist/MarkerCluster.Default.css" /-->
+
+
+
+    <script src="https://unpkg.com/leaflet@1.2.0/dist/leaflet.js" integrity="sha512-lInM/apFSqyy1o6s89K4iQUKg6ppXEgsVxT35HbzUupEVRh2Eu9Wdl4tHj7dZO0s1uvplcYGmt3498TtHq+log==" crossorigin=""></script>
+
+   	<script type="text/javascript" src="https://d3js.org/d3.v3.min.js"></script>
+
+   	<!--script type='text/javascript' src='https://unpkg.com/leaflet.markercluster@1.1.0/dist/leaflet.markercluster.js'></script-->
+
+</head>
+<body>
+
+
+
+<div id="mapid" style="width: 900px; height: 600px;"></div>
+<script>
+
+	/* THIS IS modified from my radiocanon code
+	*/
+
+	
+	var producerColor = '#009944';
+	var audioColor = 'red';
+	var strokeCol = 'black';
+	var lineWeight = 2;
+
+    var cities;
+
+	//var mymap = L.map('mapid').setView([51.505, -0.09], 13);
+	var mymap = L.map('mapid').setView([30, 0], 2);
+
+	
+	
+	//var prodCluster = L.markerClusterGroup({spiderfyDistanceMultiplier:2});
+	//var pieceCluster = L.markerClusterGroup();
+	//have to be careful about asynchronous calls here...
+	d3.csv("data/csv/cities.csv", function(data) {
+		cities = data;
+  		console.log(data[0]);
+  		//console.log(data);
+	  	for(var i = 0; i<data.length; i++)
+		{
+			//split text by comma and remove whitespace
+			angleA = data[i].Latitude.split('°');
+			minuteA = angleA[1].split('\'');
+			valence = 1;
+			if(minuteA[1]=='S') valence = -1;
+
+			// console.log(angleA[0]);
+			// console.log(minuteA[0]/60);
+			// console.log(valence);
+
+			lat = parseInt(angleA[0]);
+			lat += (minuteA[0]/60);
+			lat *= valence;
+			//lat = valence*(angleA[0] +(minuteA[0]/60));
+			//console.log(lat);
+
+			angleA = data[i].Longitude.split('°');
+			minuteA = angleA[1].split('\'');
+			valence = 1;
+			if(minuteA[1]=='W') valence = -1;
+			lon = parseInt(angleA[0]);
+			lon += (minuteA[0]/60);
+			lon *= valence;
+
+			latlng = [lat, lon];
+
+			//console.log(valence);
+			//latlng = data[i].lat_long.replace(/\s/g,'').split(",");
+			//console.log(latlng);
+
+			//clunky not-null because I don't trust JS
+			if(latlng[0] == null || latlng[1]==null)
+			{
+
+			}
+			else
+			{
+				var prod = L.circleMarker(latlng, {
+						radius: 5,
+						color: strokeCol,
+					 	fillColor: producerColor,
+					 	fillOpacity: 0.8,
+					 	//opacity: 0
+				}).addTo(mymap).bindPopup(data[i].City).on('mouseover',markerOnClick);
+
+				//.bindPopup(data[i].City);
+
+				//prodCluster.addLayer(prod);
+
+				cities[i].latlng = latlng;
+			}
+
+			
+			//producers[i].marker = L.marker([producers[i].lat_long]);
+			//console.log(producers[i]);
+		}
+
+		for(var i = 0; i<cities.length; i++)
+		{
+			latDiff = 180;
+			var latPal = -1;
+			for(var j = 0; j<cities.length; j++)
+			{
+				//console.log(Math.abs(data[i].latlng[0]-data[j].latlng[0]));
+				if(Math.abs(cities[i].latlng[0]-cities[j].latlng[0])<latDiff && i!=j)
+				{
+					latDiff = Math.abs(cities[i].latlng[0]-cities[j].latlng[0]);
+					latPal = j;
+				}
+			}	
+			cities[i].latPal = latPal;
+			console.log(i + " " + cities[i].latPal + " " + latPal);
+			//cities[i].marker = L.marker([data[i].lat_long]);
+		}	
+
+		console.log("Loaded");
+	});
+
+	function markerOnClick(e)
+	{
+		console.log(e.latPal);
+
+		var pointz = [e.latlng, cities[e.latPal].latlng];
+
+		//console.log(p + " " + q);
+		var lineo = new L.Polyline(pointz, {
+		    color: producerColor,
+		    weight: lineWeight,
+		    opacity: 0.7,
+		    smoothFactor: 1
+		});
+		//console.log("Will this work?");
+		lineo.addTo(mymap);
+
+	}
+
+	//add stories:
+	//var audio_pieces;
+
+	// function loadPieces()
+	// {
+	// 	d3.csv("data/csv/audio_pieces.csv", function(data) 
+	// 	{
+	//   		//console.log(data[0]);
+	//   		audio_pieces = data;
+	//   		//console.log(producers);
+	// 	  	for(var i = 0; i<audio_pieces.length; i++)
+	// 		{
+	// 			//split text by comma and remove whitespace
+	// 			latlng = audio_pieces[i].lat_long.replace(/\s/g,'').split(",");
+	// 			//clunky not-null because I don't trust JS
+	// 			if(latlng[0] == null || latlng[1]==null)
+	// 			{
+
+	// 			}
+	// 			else
+	// 			{
+	// 				var piece = L.circleMarker(latlng, {
+	// 						radius: 8,
+	// 						color: strokeCol,
+	// 					 	fillColor: audioColor,
+	// 					 	fillOpacity: 0.8
+	// 				}).bindPopup("<B>"+audio_pieces[i].name +"</B><br>" + audio_pieces[i].description);
+
+	// 				prodCluster.addLayer(piece);
+
+	// 				/*
+	// 					Use the same markercluster for each to avoid overlap of stories and producers
+	// 					but you don't know what's what on zoomout, sadly
+	// 				*/
+	// 				audio_pieces[i].latlng = latlng;
+
+	// 			}	
+	// 			//console.log(producers[i].latlng);
+	// 			//producers[i].marker = L.marker([producers[i].lat_long]);
+	// 			//console.log(audio_pieces[i]);
+	// 			//mymap.addLayer(pieceCluster);
+
+	// 			//draw in lines to parent producers
+	// 		}
+	// 		linkMakers();
+	// 		linkReccs();
+	// 	});
+
+		
+	// }
+
+
+	// function linkMakers()
+	// {
+	// 	for(var i = 0; i<audio_pieces.length; i++)
+	// 	{
+	// 		if(audio_pieces[i].producer_id !== null)
+	// 		{
+	// 				//console.log(audio_pieces[i].producer_id);
+	// 				for(var j = 0; j<producers.length; j++)
+	// 				{
+	// 					try
+	// 					{
+	// 						if(producers[j].id==audio_pieces[i].producer_id)
+	// 						{
+	// 							// console.log("JAZZ      "+producers[j].name + " " + i + " " + j);
+	// 							// console.log(audio_pieces[i]);
+	// 							var p = new L.LatLng(audio_pieces[i].latlng[0],audio_pieces[i].latlng[1]);
+	// 							var q = new L.LatLng(producers[j].latlng[0],producers[j].latlng[1]);
+	// 							var pointz = [p,q];
+
+	// 							var lineo = new L.Polyline(pointz, {
+	// 							    color: audioColor,
+	// 							    weight: lineWeight,
+	// 							    opacity: 0.5,
+	// 							    smoothFactor: 1
+	// 							});
+	// 							lineo.addTo(mymap);
+	// 						}
+	// 					}
+	// 					catch(err)
+	// 					{
+							
+	// 						console.log("link failed to form on Producer j of Audio Piece i; piece: " + audio_pieces[i].name + " [LOCATION: " + audio_pieces[i].latlng + "] , Producer:" + producers[j].name + " [LOCATION: " + producers[j].latlng +"]");
+							
+	// 					}
+	// 				}
+	// 		}
+
+	// 		if(audio_pieces[i].producer_2_id !== null)
+	// 		{
+	// 			//console.log(audio_pieces[i].producer_id);
+	// 			for(var j = 0; j<producers.length; j++)
+	// 			{
+	// 				try
+	// 				{
+	// 					if(producers[j].id==audio_pieces[i].producer_2_id)
+	// 					{
+	// 						var p = new L.LatLng(audio_pieces[i].latlng[0],audio_pieces[i].latlng[1]);
+	// 						var q = new L.LatLng(producers[j].latlng[0],producers[j].latlng[1]);
+	// 						var pointz = [p,q];
+
+	// 						//console.log(p + " " + q);
+	// 						var lineo = new L.Polyline(pointz, {
+	// 						    color: audioColor,
+	// 						    weight: lineWeight,
+	// 						    opacity: 0.3,
+	// 						    smoothFactor: 1
+	// 						});
+	// 						//console.log("Will this work?");
+	// 						lineo.addTo(mymap);
+	// 					}
+	// 				}
+	// 				catch(err)
+	// 				{
+	// 					//console.log("link failed to form on Producer j of Audio Piece i; i= " + i + ", j=" + j);
+	// 					console.log("link failed to form on Producer j of Audio Piece i; piece: " + audio_pieces[i].name + " [LOCATION: " + audio_pieces[i].latlng + "] , Producer:" + producers[j].name + " [LOCATION: " + producers[j].latlng +"]");
+	// 				}
+	// 			}
+	// 		}
+
+	// 		if(audio_pieces[i].producer_3_id !== null)
+	// 		{
+	// 			//console.log(audio_pieces[i].producer_id);
+	// 			for(var j = 0; j<producers.length; j++)
+	// 			{
+	// 				try
+	// 				{
+	// 					if(producers[j].id==audio_pieces[i].producer_3_id)
+	// 					{
+	// 						//console.log("JAZZ      "+producers[j].name + " " + i + " " + j);
+	// 						var p = new L.LatLng(audio_pieces[i].latlng[0],audio_pieces[i].latlng[1]);
+	// 						var q = new L.LatLng(producers[j].latlng[0],producers[j].latlng[1]);
+	// 						var pointz = [p,q];
+
+	// 						//console.log(p + " " + q);
+	// 						var lineo = new L.Polyline(pointz, {
+	// 						    color: audioColor,
+	// 						    weight: lineWeight,
+	// 						    opacity: 0.3,
+	// 						    smoothFactor: 1
+	// 						});
+	// 						//console.log("Will this work?");
+	// 						lineo.addTo(mymap);
+	// 					}
+	// 				}
+	// 				catch(err)
+	// 				{
+	// 					console.log("link failed to form on Producer j of Audio Piece i; piece: " + audio_pieces[i].name + " [LOCATION: " + audio_pieces[i].latlng + "] , Producer:" + producers[j].name + " [LOCATION: " + producers[j].latlng +"]");
+	// 				}
+	// 			}
+	// 		}
+
+
+			
+	// 	}
+	// }
+
+	// function linkReccs()
+	// {
+	// 		for(var i = 0; i<producers.length; i++)
+	// 		{
+	// 			if(producers[i].recomends_1!=null)
+	// 			{
+	// 					for(var j = 0; j<audio_pieces.length; j++)
+	// 					{
+
+	// 							var matcher = audio_pieces[j].id==producers[i].recomends_1;
+	// 							if(producers[i].recomends_2!=null) matcher = matcher || audio_pieces[j].id==producers[i].recomends_2;
+	// 							if(producers[i].recomends_3!=null) matcher = matcher || audio_pieces[j].id==producers[i].recomends_3;
+	// 							if(producers[i].recomends_4!=null) matcher = matcher || audio_pieces[j].id==producers[i].recomends_4;
+	// 							if(producers[i].recomends_5!=null) matcher = matcher || audio_pieces[j].id==producers[i].recomends_5;
+
+	// 							if(matcher)
+	// 							{
+	// 								try
+	// 								{
+	// 									//console.log(matcher)	
+										
+	// 									var p = new L.LatLng(audio_pieces[j].latlng[0],audio_pieces[j].latlng[1]);
+	// 									var q = new L.LatLng(producers[i].latlng[0],producers[i].latlng[1]);
+	// 									var pointz = [p,q];
+
+	// 									//console.log(p + " " + q);
+	// 									var lineo = new L.Polyline(pointz, {
+	// 									    color: producerColor,
+	// 									    weight: lineWeight,
+	// 									    opacity: 0.7,
+	// 									    smoothFactor: 1
+	// 									});
+	// 									//console.log("Will this work?");
+	// 									lineo.addTo(mymap);
+										
+	// 								}
+	// 								catch(err)
+	// 								{
+	// 									//console.log("Link failed to form on Producer i recommending audio piece j: " + i + " " + j)
+	// 									console.log("link failed to form on Producer i recommending Audio Piece j; piece: " + audio_pieces[j].name + " [LOCATION: " + audio_pieces[j].latlng + "] , Producer:" + producers[i].name + " [LOCATION: " + producers[i].latlng +"]");
+	// 								}
+	// 							}
+
+								
+
+								
+
+								
+	// 					}
+	// 			}
+	// 		}
+	// }
+
+
+	
+
+	// //add a nicer basemap
+	// L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/toner-background/{z}/{x}/{y}.{ext}', {
+	// 	attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+	// 	subdomains: 'abcd',
+	// 	minZoom: 0,
+	// 	maxZoom: 20,
+	// ext: 'png'
+	// }).addTo(mymap);
+
+	var Stamen_Watercolor = L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/watercolor/{z}/{x}/{y}.{ext}', {
+		attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+		subdomains: 'abcd',
+		minZoom: 1,
+		maxZoom: 16,
+		ext: 'png'
+	});
+	Stamen_Watercolor.addTo(mymap);
+
+	// L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
+	// 	maxZoom: 18,
+	// 	attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, ' +
+	// 		'<a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +
+	// 		'Imagery © <a href="http://mapbox.com">Mapbox</a>',
+	// 	id: 'mapbox.streets'
+	// }).addTo(mymap);
+
+	// L.marker([51.5, -0.09]).addTo(mymap)
+	// 	.bindPopup("<b>Hello world!</b><br />I am a popup.").openPopup();
+
+	// L.circle([51.508, -0.11], 500, {
+	// 	color: 'red',
+	// 	fillColor: '#f03',
+	// 	fillOpacity: 0.5
+	// }).addTo(mymap).bindPopup("I am a circle.");
+
+	// L.polygon([
+	// 	[51.509, -0.08],
+	// 	[51.503, -0.06],
+	// 	[51.51, -0.047]
+	// ]).addTo(mymap).bindPopup("I am a polygon.");
+
+
+	//var popup = L.popup();
+
+	// function onMapClick(e) {
+	// 	//popup
+	// 		//.setLatLng(e.latlng)
+	// 		// .setContent("You clicked the map at " + e.latlng.toString())
+	// 		// .openOn(mymap);
+	// 		//alert("You clicked the map at " + e.latlng);
+	// }
+
+	// mymap.on('click', onMapClick);
+
+</script>
+
+
+
+</body>
+</html>
